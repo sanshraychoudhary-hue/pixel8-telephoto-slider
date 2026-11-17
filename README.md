@@ -15,7 +15,7 @@ Flick to engage true optical zoom. Flick back to stow. No screw threads, no clum
 
 Experience the mechanism, test the slide stroke, and inspect mesh clearances in full 3D:
 
-👉 **[Launch Interactive 3D Web Simulator](https://sanshray.github.io/pixel8-telephoto-slider/)** *(or run locally from `web-simulator/index.html`)*
+👉 **[Launch Interactive 3D Web Simulator](https://sanshraychoudhary-hue.github.io/pixel8-telephoto-slider/)** *(or run locally from `web-simulator/index.html`)*
 
 ![Pixel 8 Slider Hero Render](media/pixel8_slider_hero_render.png)
 
