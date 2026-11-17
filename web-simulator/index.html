@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel 8 Visor Slider — Interactive 3D Telephoto Concept</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #0b0d11;
+      --card-bg: rgba(18, 22, 29, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.4);
+      --accent-active: #10b981;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Floating UI Container */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .brand-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-active);
+      box-shadow: 0 0 10px var(--accent-active);
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Right Stats Card */
+    .specs-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px);
+      border-radius: 18px;
+      padding: 20px;
+      width: 320px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .specs-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .spec-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 13px;
+    }
+
+    .spec-item:last-child {
+      border-bottom: none;
+    }
+
+    .spec-label {
+      color: var(--text-muted);
+    }
+
+    .spec-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .status-pill.active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-pill.parked {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Bottom Control Bar */
+    .bottom-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+
+    .slider-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(24px);
+      border-radius: 24px;
+      padding: 18px 28px;
+      width: min(650px, 92vw);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .slider-title {
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider-readout {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Range Slider */
+    .range-wrap {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      transition: background 0.2s;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 16px var(--accent-glow), 0 4px 10px rgba(0,0,0,0.5);
+      cursor: pointer;
+      border: 2px solid var(--accent);
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 0 24px var(--accent);
+    }
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    /* Button Group */
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 9px 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    /* View Modes floating top-right */
+    .view-modes {
+      display: flex;
+      gap: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      padding: 6px;
+      border-radius: 14px;
+    }
+
+    .view-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .view-btn.active, .view-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .instructions-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+
+  <!-- Import Three.js via ES Modules with Import Map -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="webgl-canvas"></canvas>
+
+  <div class="ui-layer">
+    <!-- Top Row -->
+    <header>
+      <div>
+        <div class="brand-badge interactive">
+          <span class="dot"></span>
+          <span>Google Pixel 8 Hardware Mod</span>
+        </div>
+        <h1>Visor-Glide Telephoto Slider</h1>
+        <p class="subtitle">Zero-setup mechanical 2x optical zoom for Google Pixel 8</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px;">
+        <div class="view-modes interactive">
+          <button class="view-btn active" id="view-hero" onclick="setCameraView('hero')">Visor 3/4</button>
+          <button class="view-btn" id="view-rear" onclick="setCameraView('rear')">Rear Visor</button>
+          <button class="view-btn" id="view-profile" onclick="setCameraView('profile')">Top Profile</button>
+          <button class="view-btn" id="view-iso" onclick="setCameraView('iso')">Full Isometric</button>
+        </div>
+
+        <div class="specs-panel interactive">
+          <div class="specs-title">
+            <span>Mechanisms & CAD Specs</span>
+            <span class="status-pill active" id="state-pill">ACTIVE (2x)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Travel Distance</span>
+            <span class="spec-value" id="spec-travel">28.0 mm</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Optic Barrel</span>
+            <span class="spec-value">Ø 15.6 mm (2x Eq.)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Target Sensor</span>
+            <span class="spec-value" id="spec-sensor">50MP Octa PD Main</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Visor Gap Clearance</span>
+            <span class="spec-value">19.4 mm (Safe Parked)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Visor Protrusion</span>
+            <span class="spec-value">+2.8 mm above glass</span>
+          </div>
+          
+          <div style="margin-top: 14px; display: flex; gap: 8px;">
+            <a href="./pixel8_visor_rail.stl" download class="btn" style="flex:1; justify-content:center; font-size:11px; padding:6px;">
+              ⬇ Rail STL
+            </a>
+            <a href="./pixel8_lens_carriage.stl" download class="btn" style="flex:1; justify-content:center; font-size:11px; padding:6px;">
+              ⬇ Carriage STL
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-bar">
+      <div class="slider-card interactive">
+        <div class="slider-header">
+          <div class="slider-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 14h6m4 0h6M4 10h6m4 0h6M8 6l-4 4 4 4M16 6l4 4-4 4"/>
+            </svg>
+            <span>Lens Carriage Slider Position</span>
+          </div>
+          <div class="slider-readout" id="pos-readout">28.0 mm (100% Engaged)</div>
+        </div>
+
+        <div class="range-wrap">
+          <input type="range" id="slider" min="0" max="100" value="100" step="0.5" oninput="onSliderChange(this.value)">
+        </div>
+
+        <div class="slider-ticks">
+          <span>PARKED (Cleared)</span>
+          <span>50%</span>
+          <span>ACTIVE (Main Camera)</span>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn" id="btn-parked" onclick="snapTo(0)">
+            <span>🅿️ Parked (0mm)</span>
+          </button>
+          <button class="btn active" id="btn-active" onclick="snapTo(100)">
+            <span>🔍 2x Telephoto (28mm)</span>
+          </button>
+          <button class="btn" id="btn-explode" onclick="toggleExploded()">
+            <span>💥 Exploded View</span>
+          </button>
+          <button class="btn" id="btn-wireframe" onclick="toggleWireframe()">
+            <span>📐 Wireframe</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="instructions-hint interactive">
+        Left Click + Drag: Orbit 360° • Scroll: Zoom • Right Click: Pan
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    // State & Constants
+    // In glTF space:
+    // Z is horizontal across the visor (sideways sliding)
+    // Y is perpendicular to the back glass (+Y is back of phone / camera visor, -Y is screen!)
+    // X is vertical height along the phone (+X is towards the top)
+    const travelSpan = 0.0280; // 28 mm horizontal stroke
+    let baseCarriageZ = 0;
+    let baseCarriageY = 0;
+    let baseLensZ = 0;
+    let baseLensY = 0;
+    let baseRailY = 0;
+
+    let carriageObj = null;
+    let railObj = null;
+    let lensGlassObj = null;
+    let isExploded = false;
+    let isWireframe = false;
+
+    // Three.js Scene Setup
+    const canvas = document.getElementById('webgl-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0d11);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 2.5;
+    controls.minDistance = 0.05;
+
+    // Lighting (illuminating the back visor at +Y)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xe0f2fe, 3.0);
+    keyLight.position.set(0.1, 0.4, 0.2); // Pointing at the back (+Y)
+    scene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 2.5);
+    rimLight.position.set(-0.2, 0.3, -0.2);
+    scene.add(rimLight);
+
+    const fillLight = new THREE.DirectionalLight(0xfef08a, 1.2);
+    fillLight.position.set(0.3, 0.2, 0.3);
+    scene.add(fillLight);
+
+    // Visor center coordinates in glTF:
+    // X = 0.048, Y = +0.005 (Back Visor), Z = 0.045
+    const visorCenter = [0.048, 0.005, 0.045];
+
+    // Camera view presets targeting the back visor:
+    const views = {
+      // 3/4 Perspective of the Visor and Slider
+      hero: { pos: [0.10, 0.16, 0.14], target: visorCenter },
+      // Straight-on view of the Camera Visor
+      rear: { pos: [0.048, 0.22, 0.045], target: visorCenter },
+      // Top profile view (looking down the rail showing thickness and clearance)
+      profile: { pos: [0.20, 0.005, 0.045], target: visorCenter },
+      // Full isometric view of the entire phone back
+      iso: { pos: [0.18, 0.26, 0.22], target: [0.0, 0.0, 0.0] }
+    };
+
+    window.setCameraView = function(name) {
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('view-' + name);
+      if (btn) btn.classList.add('active');
+      const v = views[name];
+      if (v) {
+        animateCameraTo(v.pos, v.target);
+      }
+    };
+
+    function animateCameraTo(newPos, newTarget) {
+      const duration = 30;
+      let frame = 0;
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      const endPos = new THREE.Vector3(...newPos);
+      const endTarget = new THREE.Vector3(...newTarget);
+
+      function step() {
+        frame++;
+        const t = frame / duration;
+        const ease = 0.5 - Math.cos(t * Math.PI) / 2;
+        camera.position.lerpVectors(startPos, endPos, ease);
+        controls.target.lerpVectors(startTarget, endTarget, ease);
+        if (frame < duration) {
+          requestAnimationFrame(step);
+        }
+      }
+      step();
+    }
+
+    // Slider Logic - Translating horizontally along Z axis across the visor rail!
+    window.onSliderChange = function(val) {
+      const pct = parseFloat(val) / 100.0;
+      // In the GLB model, Active (Main camera) is at baseCarriageZ.
+      // Parked (in the 19.4mm clean gap towards the flash) is at +0.0280m along Z.
+      const shiftZ = (1.0 - pct) * travelSpan;
+      const mm = (pct * 28.0).toFixed(1);
+
+      if (carriageObj) {
+        carriageObj.position.z = baseCarriageZ + shiftZ;
+      }
+      if (lensGlassObj) {
+        lensGlassObj.position.z = baseLensZ + shiftZ;
+      }
+
+      const readout = document.getElementById('pos-readout');
+      const statePill = document.getElementById('state-pill');
+      const specTravel = document.getElementById('spec-travel');
+      const specSensor = document.getElementById('spec-sensor');
+      const btnParked = document.getElementById('btn-parked');
+      const btnActive = document.getElementById('btn-active');
+
+      if (specTravel) specTravel.innerText = `${mm} mm`;
+
+      if (pct > 0.8) {
+        if (readout) readout.innerText = `${mm} mm (Active Telephoto)`;
+        if (statePill) {
+          statePill.className = "status-pill active";
+          statePill.innerText = "ACTIVE (2x)";
+        }
+        if (specSensor) specSensor.innerText = "50MP Octa PD Main";
+        if (btnActive) btnActive.classList.add('active');
+        if (btnParked) btnParked.classList.remove('active');
+      } else if (pct < 0.2) {
+        if (readout) readout.innerText = `${mm} mm (Parked Safe Zone)`;
+        if (statePill) {
+          statePill.className = "status-pill parked";
+          statePill.innerText = "PARKED (Cleared)";
+        }
+        if (specSensor) specSensor.innerText = "All Sensors Uncovered";
+        if (btnParked) btnParked.classList.add('active');
+        if (btnActive) btnActive.classList.remove('active');
+      } else {
+        if (readout) readout.innerText = `${mm} mm (In Transition)`;
+        if (statePill) {
+          statePill.className = "status-pill parked";
+          statePill.innerText = "SLIDING";
+        }
+        if (specSensor) specSensor.innerText = "Traversing Rail";
+        if (btnParked) btnParked.classList.remove('active');
+        if (btnActive) btnActive.classList.remove('active');
+      }
+    };
+
+    window.snapTo = function(targetVal) {
+      const slider = document.getElementById('slider');
+      if (!slider) return;
+      const startVal = parseFloat(slider.value);
+      let frame = 0;
+      const totalFrames = 25;
+
+      function step() {
+        frame++;
+        const t = frame / totalFrames;
+        const ease = 0.5 - Math.cos(t * Math.PI) / 2;
+        const current = startVal + (targetVal - startVal) * ease;
+        slider.value = current;
+        window.onSliderChange(current);
+        if (frame < totalFrames) {
+          requestAnimationFrame(step);
+        }
+      }
+      step();
+    };
+
+    // Exploded view moves perpendicularly off the phone (+Y axis)
+    window.toggleExploded = function() {
+      isExploded = !isExploded;
+      const btn = document.getElementById('btn-explode');
+      if (btn) btn.classList.toggle('active', isExploded);
+
+      const explodeOffset = isExploded ? 0.018 : 0;
+      if (railObj) railObj.position.y = baseRailY + explodeOffset * 0.5;
+      if (carriageObj) carriageObj.position.y = baseCarriageY + explodeOffset;
+      if (lensGlassObj) lensGlassObj.position.y = baseLensY + explodeOffset;
+    };
+
+    window.toggleWireframe = function() {
+      isWireframe = !isWireframe;
+      const btn = document.getElementById('btn-wireframe');
+      if (btn) btn.classList.toggle('active', isWireframe);
+      scene.traverse((obj) => {
+        if (obj.isMesh && obj.material) {
+          obj.material.wireframe = isWireframe;
+        }
+      });
+    };
+
+    // Load Assembly GLB
+    const loader = new GLTFLoader();
+    loader.load('./pixel8_slider_assembly.glb', (gltf) => {
+      const model = gltf.scene;
+      scene.add(model);
+
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          if (child.name.includes("Carriage")) {
+            carriageObj = child;
+            baseCarriageZ = child.position.z;
+            baseCarriageY = child.position.y;
+          }
+          if (child.name.includes("Rail")) {
+            railObj = child;
+            baseRailY = child.position.y;
+          }
+          if (child.name.includes("TelephotoGlass")) {
+            lensGlassObj = child;
+            baseLensZ = child.position.z;
+            baseLensY = child.position.y;
+          }
+        }
+      });
+
+      // Set default camera view straight at the back visor
+      window.setCameraView('hero');
+      window.onSliderChange(100);
+    }, undefined, (err) => {
+      console.error("Error loading GLB:", err);
+    });
+
+    // Render loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

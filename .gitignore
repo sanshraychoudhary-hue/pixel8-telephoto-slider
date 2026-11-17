@@ -1,0 +1,12 @@
+# 3D and Blender working backups
+*.blend1
+*.blend@
+
+# Slicer intermediate files
+*.gcode
+*.3mf
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
